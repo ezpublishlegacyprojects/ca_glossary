@@ -1,5 +1,5 @@
 CA Glossary - Adds automatically links on word from a Glossary
-Copyright (C) 2009 Sévère Matthieu
+Copyright (C) 2009 Severe Matthieu (msevere@clever-age.com)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
