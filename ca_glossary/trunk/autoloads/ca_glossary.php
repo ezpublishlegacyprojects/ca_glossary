@@ -1,5 +1,5 @@
 <?php
-/* 
+/*
  * Created on 10-08-09
  *
  * ca_glossary operator replaces texts that match a glossary by a template of the word definition.
@@ -134,9 +134,11 @@ class CAGlossary
             $title = $dataMap[$titleAttributeIdentifier]->content();
             $definition = $dataMap[$definitionAttributeIdentifier]->content();
 
-            // match the current definition between a word beginning and a word end (\b) and not followed by closing exception tags
-            $patternArray[] = "/\b".preg_quote( $title, '/' )."\b(?![^<\/(".$exceptionTagsString.")>]*<\/(".$exceptionTagsString.")>+)/i";
-            
+            // match the current definition between a word beginning and a word end (\b)
+            // and not followed by closing exception tags : (?![^<\/(".$exceptionTagsString.")>]*<\/(".$exceptionTagsString.")>+)
+            // and not in between < and > that is to say in a tag, for example title of a img : (?![^(>|<)]*>+)
+            $patternArray[] = "/\b".preg_quote( $title, '/' )."\b(?![^<\/(".$exceptionTagsString.")>]*<\/(".$exceptionTagsString.")>+)(?![^(>|<)]*>+)/i";
+
             $tpl = templateInit();
             $tpl->setVariable( 'title', $title );
             $tpl->setVariable( 'glossaryUrl', $glossaryUrl );
@@ -149,7 +151,7 @@ class CAGlossary
         );
     }
 
-    
+
 }
 
 ?>
