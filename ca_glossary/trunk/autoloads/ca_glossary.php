@@ -8,6 +8,7 @@
 
 class CAGlossary
 {
+    private $glossaryArray = array();
     /**
      * Constructor
      *
@@ -73,8 +74,9 @@ class CAGlossary
                     $ini = eZIni::instance('glossary.ini');
                     $replacementLimit = $ini->variable('GeneralSettings','ReplacementLimit');
 
-                    $glossaryArray = $this->buildGlossaryArray();
-                    $ret = preg_replace($glossaryArray['pattern'], $glossaryArray['replace'], $namedParameters['xml_text'], $replacementLimit);
+                    $glossaryRegExp = $this->buildGlossaryRegExp();
+
+                    $ret = preg_replace_callback($glossaryRegExp, array($this, 'replaceByTemplate'), $namedParameters['xml_text'], $replacementLimit);
                     } catch (Exception $e) {
                         $ret = $namedParameters['xml_text'];
                     }
@@ -84,9 +86,17 @@ class CAGlossary
     }
 
     /*
+     * Return word related replacement text in the class variable glossarayArray
+     */
+    private function replaceByTemplate($matches)
+    {
+        return $this->glossaryArray[strtolower($matches[1])];
+    }
+
+    /*
      * Build related arrays of search pattern and corresponding replacement
      */
-    function buildGlossaryArray()
+    function buildGlossaryRegExp()
     {
         // initialisation
         $ini = eZIni::instance('glossary.ini');
@@ -121,7 +131,7 @@ class CAGlossary
         $glossaryUrl = $glossaryNode->attribute('url_alias');
 
         // foreach definition : save search pattern and fetch template for replacement
-        $patternArray = array();
+        $matchArray = array();
         $replaceArray = array();
         foreach ( $definitions as $definition )
         {
@@ -134,21 +144,23 @@ class CAGlossary
             $title = $dataMap[$titleAttributeIdentifier]->content();
             $definition = $dataMap[$definitionAttributeIdentifier]->content();
 
-            // match the current definition between a word beginning and a word end (\b)
-            // and not followed by closing exception tags : (?![^<\/(".$exceptionTagsString.")>]*<\/(".$exceptionTagsString.")>+)
-            // and not in between < and > that is to say in a tag, for example title of a img : (?![^(>|<)]*>+)
-            $patternArray[] = "/\b".preg_quote( $title, '/' )."\b(?![^<\/(".$exceptionTagsString.")>]*<\/(".$exceptionTagsString.")>+)(?![^(>|<)]*>+)/i";
+            $matchArray[] = preg_quote( $title, '/' );
 
             $tpl = templateInit();
             $tpl->setVariable( 'title', $title );
             $tpl->setVariable( 'glossaryUrl', $glossaryUrl );
             $tpl->setVariable( 'definition', $definition );
-            $replaceArray[] = $tpl->fetch( 'design:ca_glossary.tpl' );
+            $replaceArray[strtolower($title)] = $tpl->fetch( 'design:ca_glossary.tpl' );
         }
 
-        return array('pattern' => $patternArray,
-                     'replace' => $replaceArray
-        );
+        // match the current definition between a word beginning and a word end (\b)
+        // and not followed by closing exception tags : (?!.*<\/(".$exceptionTagsString.")>+)
+        // and not in between < and > that is to say in a tag, for example title of a img : (?![^(>|<)]*>+)
+        $regExp = "/\b(".implode('|',$matchArray).")\b(?!.*<\/(".$exceptionTagsString.")>+)(?![^(>|<)]*>+)/i";
+
+        $this->glossaryArray = $replaceArray;
+
+        return $regExp;
     }
 
 
